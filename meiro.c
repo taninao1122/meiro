@@ -3,11 +3,16 @@
 #include <avr/wdt.h>
 
 #define CTOP 10000UL;
+#define BZ_CTOP 1000UL
+#define BZ_CTOP2 500UL
+#define BZ_CTOP3  100UL
+
 
 volatile unsigned char map[8] =
   {
       0b10111111,
-      0b10011111,
+ //     0b00000000,
+	  0b10011111,
       0b11000000,
       0b11111110,
       0b10000000,
@@ -20,11 +25,12 @@ volatile unsigned char sw;
 volatile unsigned char sw_flag;
 volatile unsigned char mv_flag;
 
-void update_led();
-
+static unsigned char my_state = 0;
 static unsigned char scan = 0;
-unsigned char x = 0x00;
+unsigned char x = 0x40;
+unsigned char smog_b = 0xE0;
 
+void update_led();
 
 ISR(PCINT1_vect)
 {
@@ -44,12 +50,45 @@ void update_sw()
 	case 2:
 		cnt--;
 		if (cnt == 0) {
-			sw = ~(PINC >> 4) & 3;	// �ϐ�sw��X�V
-			sw_flag = 1;	// �t���O�𗧂Ă�
+			sw = ~(PINC >> 4) & 3;	
+			sw_flag = 1;
 			stat = 0;
 		}
 		return;
 	}
+}
+
+void proc_bz1()
+{
+    static unsigned long cnt = 0;
+    cnt ++;
+    if(cnt < BZ_CTOP){
+        return;
+    }
+    cnt = 0;
+    PORTD ^=0x08;
+}
+
+void proc_bz2()
+{
+    static unsigned long cnt2 = 0;
+    cnt2 ++;
+    if(cnt2 < BZ_CTOP2){
+        return;
+    }
+    cnt2 = 0;
+    PORTD ^=0x08;
+}
+
+void proc_bz3()
+{
+    static unsigned long cnt3 = 0;
+    cnt3 ++;
+    if(cnt3 < BZ_CTOP3){
+        return;
+    }
+    cnt3 = 0;
+    PORTD ^=0x08;
 }
 
 ISR(TIMER0_COMPA_vect)
@@ -71,13 +110,34 @@ void update_led()
 	PORTD = (PORTD & 0x0F) | (sc & 0xF0);	          
 	PORTC = (PORTC & 0xF0) | (sc & 0x0F);	          
 	scan = (scan + 1) & 7;
-	PORTB = map[scan];
+//    PORTB = map[scan];
+	if(my_state != 0)	{
+//		if(scan == my_state || scan == my_state +1  || scan == my_state -1)
+
+        if(scan == my_state ){
+			//PORTB = map[scan];
+		    PORTB = map[scan] & smog_b;
+		}else if(scan == (my_state + 1)){
+              PORTB = map[scan] & smog_b;
+        }else if(scan == (my_state - 1)){
+            PORTB = map[scan] & smog_b;            
+        }
+		
+	 }else{
+        if(scan == my_state ){
+			//PORTB = map[scan];
+		    PORTB = map[scan] & smog_b;
+		}else if(scan == (my_state + 1)){
+              PORTB = map[scan] & smog_b;
+        }
+    }
+
 }
 
 int main()
 {
-	unsigned char n;
-    unsigned char n2;
+//	unsigned char n;
+//    unsigned char n2;
 
 	DDRB = 0xFF;
 	DDRC = 0x0F;
@@ -99,32 +159,45 @@ int main()
 	for (;;) {
 		wdt_reset();
         update_sw();
+        if(scan == my_state){
+                PORTB |= x;
+            }	
         
         if (sw_flag) {
-			sw_flag = 0;	
+			sw_flag = 0;
+
+/*			if(scan == my_state){
+				if(my_state < 4){
+					//PORTC =					
+				}else{
+					//PORTD = 
+				}
+					 		
+			}
+*/
 			switch (sw) {
 			case 0:
 				break;
 			case 1:
 				x = (x >> 7) | (x << 1);
+				smog_b = (smog_b >> 7) | (smog_b << 1);
+				proc_bz1();
 				break;
 	        case 2:
+				proc_bz2();
 				x = (x << 7) | (x >> 1);
+				smog_b = (smog_b << 7) | (smog_b >> 1);
 				break;
 			case 3:
+				proc_bz3();
+				my_state ++;
 				break;
 			}
-		}
-        
+			
+
+		}      
 		if (mv_flag == 1) {
 			mv_flag = 0;
-     /*    for (n = 7; n > 0; n--) {
-                map[n] = (map[n] << 1) | (map[n] >> 7);
-                n2 = (n-1) & 7;
-                map[n] = map[n2]; 						
-            }
-            map[0] = map[7];
-*/
 		}
 	}
 	return 0;
