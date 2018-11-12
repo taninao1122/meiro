@@ -11,9 +11,7 @@
 
 #define user_CTOP 50000UL
 #define CTOP 10000UL
-#define BZ_CTOP 1000UL
-#define BZ_CTOP2 500UL
-#define BZ_CTOP3  100UL
+
 
 
 volatile unsigned char map[8] =
@@ -21,9 +19,9 @@ volatile unsigned char map[8] =
  //     0b10111111,
       0b00000000,
 	  0b10011111,
-      0b11000000,
-      0b11111110,
-      0b10000000,
+      0b11000001,
+      0b11111101,
+      0b10000001,
       0b10111111,
       0b10000000,
       0b11111110
@@ -32,6 +30,7 @@ volatile unsigned char stat;
 volatile unsigned char sw;		
 volatile unsigned char sw_flag;
 volatile unsigned char mv_flag;
+volatile unsigned char period;
 
 static unsigned char scan = 0;
 unsigned char my_state = 0;
@@ -44,6 +43,29 @@ void update_led();
 ISR(PCINT1_vect)
 {
 	stat = 1;
+}
+
+ISR(TIMER0_COMPA_vect)
+{
+	static int cnt;
+	cnt++;
+	if (cnt == 100) {
+		cnt = 0;
+		mv_flag = 1;	
+	}
+	update_led();	
+}
+
+ISR(TIMER2_COMPA_vect)
+{
+	PORTD  ^= _BV(PORTD3);
+   /* if(period != 0){
+	    period --;
+	    if(period == 0){
+		   	OCR2A = 0;
+		}
+    }
+	*/
 }
 
 void update_sw()
@@ -67,49 +89,6 @@ void update_sw()
 	}
 }
 
-void proc_bz1()
-{
-    static unsigned long cnt = 0;
-    cnt ++;
-    if(cnt < BZ_CTOP){
-        return;
-    }
-    cnt = 0;
-    PORTD ^=0x08;
-}
-
-void proc_bz2()
-{
-    static unsigned long cnt2 = 0;
-    cnt2 ++;
-    if(cnt2 < BZ_CTOP2){
-        return;
-    }
-    cnt2 = 0;
-    PORTD ^=0x08;
-}
-
-void proc_bz3()
-{
-    static unsigned long cnt3 = 0;
-    cnt3 ++;
-    if(cnt3 < BZ_CTOP3){
-        return;
-    }
-    cnt3 = 0;
-    PORTD ^=0x08;
-}
-
-ISR(TIMER0_COMPA_vect)
-{
-	static int cnt;
-	cnt++;
-	if (cnt == 100) {
-		cnt = 0;
-		mv_flag = 1;	
-	}
-	update_led();	
-}
 void update_led()
 {
 	static unsigned char sc = 0xFE;
@@ -119,30 +98,30 @@ void update_led()
 	PORTD = (PORTD & 0x0F) | (sc & 0xF0);	          
 	PORTC = (PORTC & 0xF0) | (sc & 0x0F);	          
 	scan = (scan + 1) & 7;
-    PORTB = map[scan];
+	    PORTB = map[scan]; //ﾃﾞﾊﾞｯｸﾞ用
     if(scan == my_state){
         PORTB |= x;
-    }	
-/*	if(my_state != 0)	{
+    }
+//霧の発生	
+/*
+	if(my_state != 0)	{
 
         if(scan == my_state ){
-			//PORTB = map[scan];
 		    PORTB = map[scan] & smog_b;
 		}else if(scan == (my_state + 1)){
               PORTB = map[scan] & smog_b;
         }else if(scan == (my_state - 1)){
             PORTB = map[scan] & smog_b;            
-        }
-		
+        }		
 	 }else{
-        if(scan == my_state ){
-			//PORTB = map[scan];
+        if(scan == my_state ){;
 		    PORTB = map[scan] & smog_b;
 		}else if(scan == (my_state + 1)){
               PORTB = map[scan] & smog_b;
         }
     }
 */
+//霧の発生終了
 }
 
 int main()
@@ -165,13 +144,22 @@ int main()
 	OCR0A = 249;
 	TCCR0A = 2;
 	TCCR0B = 3;
-	TIMSK0 |= _BV(OCIE0A);	
+	TIMSK0 |= _BV(OCIE0A);
+
+	TCCR2A = 02;
+	TCCR2B = 0x04;
+	TIMSK2 = _BV(OCIE2A);
+	OCR2A = 0;
+	OCR2B = 0;
+
 
 	sei();
 	for (;;) {
 		wdt_reset();
         update_sw();
 		user_cnt ++;
+		
+		
 		if(user_cnt >= user_CTOP){
 			user_cnt = 0;
 			if(user_b == false){
@@ -185,7 +173,7 @@ int main()
 			
 			 
 		}	
-        
+        OCR2A = 0;
         if (sw_flag) {
 			sw_flag = 0;
 			switch (sw) {
@@ -195,11 +183,13 @@ int main()
 					x = (x >> 7) | (x << 1);
 					if((map[my_state] & x) == 0){
 						smog_b = (smog_b >> 7) | (smog_b << 1);
-						proc_bz1();	
+						period = 1000000;
+						OCR2A = 62;
 					}
 					else{
 						x = (x << 7) | (x >> 1);
-						//proc_bz();	
+						period = 1000000;
+						OCR2A = 238;
 					}
 					
 					break;
@@ -207,25 +197,29 @@ int main()
 					x = (x << 7) | (x >> 1);
 					if((map[my_state] & x) == 0){
 						smog_b = (smog_b << 7) | (smog_b >> 1);
-						proc_bz2();	
+						period = 1000000;
+						OCR2A = 62;
+							
 					}else{
 						x = (x >> 7) | (x << 1);
-						//proc_bz();
+						period = 1000000;
+						OCR2A = 238;
+						
 					}
 					break;
 				case 3:
-					my_state = (my_state + 1) & 7;
+					my_state = (my_state + 1) & 7;			
 					if((map[my_state] & x) == 0){
-						proc_bz3();
+						period = 1000000;
+						OCR2A = 62;
 					}
 					else{
 						my_state = (my_state - 1) & 7;
-						//proc_bz();	
+						period = 1000000;
+						OCR2A = 238;	
 					}
-					break;
+					break;				
 			}
-			
-
 		}      
 		if (mv_flag == 1) {
 			mv_flag = 0;
