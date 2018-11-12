@@ -7,8 +7,10 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
+#include <stdbool.h>
 
-#define CTOP 10000UL;
+#define user_CTOP 50000UL
+#define CTOP 10000UL
 #define BZ_CTOP 1000UL
 #define BZ_CTOP2 500UL
 #define BZ_CTOP3  100UL
@@ -31,9 +33,10 @@ volatile unsigned char sw;
 volatile unsigned char sw_flag;
 volatile unsigned char mv_flag;
 
-unsigned char my_state = 0;
 static unsigned char scan = 0;
+unsigned char my_state = 0;
 unsigned char x = 0x40;
+unsigned char x_sub = 0;
 unsigned char smog_b = 0xE0;
 
 void update_led();
@@ -144,8 +147,9 @@ void update_led()
 
 int main()
 {
-//	unsigned char n;
-//    unsigned char n2;
+	unsigned long user_cnt = 0;
+	unsigned long user_cnt2 = 0;
+	bool user_b = false;
 
 	DDRB = 0xFF;
 	DDRC = 0x0F;
@@ -166,20 +170,24 @@ int main()
 	sei();
 	for (;;) {
 		wdt_reset();
-        update_sw();	
+        update_sw();
+		user_cnt ++;
+		if(user_cnt >= user_CTOP){
+			user_cnt = 0;
+			if(user_b == false){
+				x_sub = x;
+				x = x & 0;
+				user_b = true;
+			}else{
+				x = x_sub;
+				user_b = false;
+			}
+			
+			 
+		}	
         
         if (sw_flag) {
 			sw_flag = 0;
-
-/*			if(scan == my_state){
-				if(my_state < 4){
-					//PORTC =					
-				}else{
-					//PORTD = 
-				}
-					 		
-			}
-*/
 			switch (sw) {
 				case 0:
 					break;
@@ -208,7 +216,7 @@ int main()
 				case 3:
 					my_state = (my_state + 1) & 7;
 					if((map[my_state] & x) == 0){
-						proc_bz3;
+						proc_bz3();
 					}
 					else{
 						my_state = (my_state - 1) & 7;
