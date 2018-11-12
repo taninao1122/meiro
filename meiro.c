@@ -1,3 +1,9 @@
+/*
+制作者情報:1614266 3EP1-07 大谷直也
+作成日:2018/11/12
+動かし方：スイッチ操作でスタートからゴールまで行く
+*/
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
@@ -10,8 +16,8 @@
 
 volatile unsigned char map[8] =
   {
-      0b10111111,
- //     0b00000000,
+ //     0b10111111,
+      0b00000000,
 	  0b10011111,
       0b11000000,
       0b11111110,
@@ -25,7 +31,7 @@ volatile unsigned char sw;
 volatile unsigned char sw_flag;
 volatile unsigned char mv_flag;
 
-static unsigned char my_state = 0;
+unsigned char my_state = 0;
 static unsigned char scan = 0;
 unsigned char x = 0x40;
 unsigned char smog_b = 0xE0;
@@ -105,14 +111,16 @@ void update_led()
 {
 	static unsigned char sc = 0xFE;
 	
-	PORTB = 0;	
+	PORTB = 0;
 	sc = (sc << 1) | (sc >> 7);
 	PORTD = (PORTD & 0x0F) | (sc & 0xF0);	          
 	PORTC = (PORTC & 0xF0) | (sc & 0x0F);	          
 	scan = (scan + 1) & 7;
-//    PORTB = map[scan];
-	if(my_state != 0)	{
-//		if(scan == my_state || scan == my_state +1  || scan == my_state -1)
+    PORTB = map[scan];
+    if(scan == my_state){
+        PORTB |= x;
+    }	
+/*	if(my_state != 0)	{
 
         if(scan == my_state ){
 			//PORTB = map[scan];
@@ -131,7 +139,7 @@ void update_led()
               PORTB = map[scan] & smog_b;
         }
     }
-
+*/
 }
 
 int main()
@@ -158,10 +166,7 @@ int main()
 	sei();
 	for (;;) {
 		wdt_reset();
-        update_sw();
-        if(scan == my_state){
-                PORTB |= x;
-            }	
+        update_sw();	
         
         if (sw_flag) {
 			sw_flag = 0;
