@@ -181,22 +181,40 @@ int main()
 			}
 */
 			switch (sw) {
-			case 0:
-				break;
-			case 1:
-				x = (x >> 7) | (x << 1);
-				smog_b = (smog_b >> 7) | (smog_b << 1);
-				proc_bz1();
-				break;
-	        case 2:
-				proc_bz2();
-				x = (x << 7) | (x >> 1);
-				smog_b = (smog_b << 7) | (smog_b >> 1);
-				break;
-			case 3:
-				proc_bz3();
-				my_state ++;
-				break;
+				case 0:
+					break;
+				case 1:
+					x = (x >> 7) | (x << 1);
+					if((map[my_state] & x) == 0){
+						smog_b = (smog_b >> 7) | (smog_b << 1);
+						proc_bz1();	
+					}
+					else{
+						x = (x << 7) | (x >> 1);
+						//proc_bz();	
+					}
+					
+					break;
+				case 2:
+					x = (x << 7) | (x >> 1);
+					if((map[my_state] & x) == 0){
+						smog_b = (smog_b << 7) | (smog_b >> 1);
+						proc_bz2();	
+					}else{
+						x = (x >> 7) | (x << 1);
+						//proc_bz();
+					}
+					break;
+				case 3:
+					my_state = (my_state + 1) & 7;
+					if((map[my_state] & x) == 0){
+						proc_bz3;
+					}
+					else{
+						my_state = (my_state - 1) & 7;
+						//proc_bz();	
+					}
+					break;
 			}
 			
 
