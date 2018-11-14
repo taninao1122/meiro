@@ -17,7 +17,7 @@
 volatile unsigned char map[8] =
   {
  //     0b10111111,
-      0b00000000,
+      0b10010000,
 	  0b10011111,
       0b11000001,
       0b11111101,
@@ -47,25 +47,20 @@ ISR(PCINT1_vect)
 
 ISR(TIMER0_COMPA_vect)
 {
-	static int cnt;
-	cnt++;
-	if (cnt == 100) {
-		cnt = 0;
-		mv_flag = 1;	
-	}
 	update_led();	
 }
 
 ISR(TIMER2_COMPA_vect)
 {
 	PORTD  ^= _BV(PORTD3);
-   /* if(period != 0){
+    if(period != 0){
 	    period --;
 	    if(period == 0){
+			DDRD = 0xF6;
 		   	OCR2A = 0;
 		}
     }
-	*/
+	
 }
 
 void update_sw()
@@ -127,12 +122,12 @@ void update_led()
 int main()
 {
 	unsigned long user_cnt = 0;
-	unsigned long user_cnt2 = 0;
+//	unsigned long user_cnt2 = 0;
 	bool user_b = false;
 
 	DDRB = 0xFF;
 	DDRC = 0x0F;
-	DDRD = 0xFE;
+	DDRD = 0xF6;
 
 	PORTB = 0x00;
 	PORTC = 0x30;
@@ -173,9 +168,9 @@ int main()
 			
 			 
 		}	
-        OCR2A = 0;
         if (sw_flag) {
 			sw_flag = 0;
+			DDRD = 0xFE;
 			switch (sw) {
 				case 0:
 					break;
@@ -183,12 +178,12 @@ int main()
 					x = (x >> 7) | (x << 1);
 					if((map[my_state] & x) == 0){
 						smog_b = (smog_b >> 7) | (smog_b << 1);
-						period = 1000000;
+						period = 1000;
 						OCR2A = 62;
 					}
 					else{
 						x = (x << 7) | (x >> 1);
-						period = 1000000;
+						period = 1000;
 						OCR2A = 238;
 					}
 					
@@ -197,12 +192,12 @@ int main()
 					x = (x << 7) | (x >> 1);
 					if((map[my_state] & x) == 0){
 						smog_b = (smog_b << 7) | (smog_b >> 1);
-						period = 1000000;
+						period = 1000;
 						OCR2A = 62;
 							
 					}else{
 						x = (x >> 7) | (x << 1);
-						period = 1000000;
+						period = 1000;
 						OCR2A = 238;
 						
 					}
@@ -210,20 +205,17 @@ int main()
 				case 3:
 					my_state = (my_state + 1) & 7;			
 					if((map[my_state] & x) == 0){
-						period = 1000000;
+						period = 1000;
 						OCR2A = 62;
 					}
 					else{
 						my_state = (my_state - 1) & 7;
-						period = 1000000;
+						period = 1000;
 						OCR2A = 238;	
 					}
 					break;				
 			}
-		}      
-		if (mv_flag == 1) {
-			mv_flag = 0;
-		}
+		} 
 	}
 	return 0;
 }
