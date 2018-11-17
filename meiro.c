@@ -29,15 +29,17 @@ volatile unsigned char map[8] =
 volatile unsigned char stat;
 volatile unsigned char sw;		
 volatile unsigned char sw_flag;
+
 volatile unsigned char mv_flag;
-volatile unsigned char period;
+//volatile unsigned char period;
+volatile unsigned int period;
 
 static unsigned char scan = 0;
 unsigned char my_state = 0;
 unsigned char x = 0x40;
 unsigned char x_sub = 0;
 unsigned char smog_b = 0xE0;
-
+bool sw_flag2 = false;
 void update_led();
 
 ISR(PCINT1_vect)
@@ -53,14 +55,20 @@ ISR(TIMER0_COMPA_vect)
 ISR(TIMER2_COMPA_vect)
 {
 	PORTD  ^= _BV(PORTD3);
-    if(period != 0){
-	    period --;
-	    if(period == 0){
-			DDRD = 0xF6;
-		   	OCR2A = 0;
+	if(sw_flag2 == true){
+		if(period != 0){
+			period --;
+			if(period == 0){
+				sw_flag2 = false;
+				DDRD = 0xF6;
+			//	OCR2A = 0;
+			}
 		}
-    }
-	
+	}
+	else{
+		OCR2A = 0;
+	}
+
 }
 
 void update_sw()
@@ -93,29 +101,33 @@ void update_led()
 	PORTD = (PORTD & 0x0F) | (sc & 0xF0);	          
 	PORTC = (PORTC & 0xF0) | (sc & 0x0F);	          
 	scan = (scan + 1) & 7;
-	    PORTB = map[scan]; //ﾃﾞﾊﾞｯｸﾞ用
-    if(scan == my_state){
-        PORTB |= x;
-    }
-//霧の発生	
-/*
-	if(my_state != 0)	{
-
-        if(scan == my_state ){
-		    PORTB = map[scan] & smog_b;
-		}else if(scan == (my_state + 1)){
-              PORTB = map[scan] & smog_b;
-        }else if(scan == (my_state - 1)){
-            PORTB = map[scan] & smog_b;            
-        }		
-	 }else{
-        if(scan == my_state ){;
-		    PORTB = map[scan] & smog_b;
-		}else if(scan == (my_state + 1)){
-              PORTB = map[scan] & smog_b;
-        }
+	//PORTB = map[scan]; //ﾃﾞﾊﾞｯｸﾞ用
+   /* 
+	if(scan == my_state){
+        PORTB |= x; //プレイヤーの表示
     }
 */
+//霧の発生	
+	if(my_state != 0){
+
+		if(scan == my_state ){
+			PORTB = map[scan] & smog_b;
+			PORTB |= x;
+		}else if(scan == (my_state + 1)){
+				PORTB = map[scan] & smog_b;
+		}else if(scan == (my_state - 1)){
+			PORTB = map[scan] & smog_b;            
+		}
+
+	}
+	else{
+		if(scan == my_state ){
+			PORTB = map[scan] & smog_b;
+			PORTB |= x;
+		}else if(scan == (my_state + 1)){
+			PORTB = map[scan] & smog_b;
+		}
+	}
 //霧の発生終了
 }
 
@@ -171,38 +183,45 @@ int main()
         if (sw_flag) {
 			sw_flag = 0;
 			DDRD = 0xFE;
-			switch (sw) {
+			switch (sw) {	
 				case 0:
 					break;
 				case 1:
-					x = (x >> 7) | (x << 1);
+					sw_flag2 = true;
 					if((map[my_state] & x) == 0){
+						x = (x >> 7) | (x << 1);
 						smog_b = (smog_b >> 7) | (smog_b << 1);
 						period = 1000;
 						OCR2A = 62;
 					}
 					else{
 						x = (x << 7) | (x >> 1);
+						smog_b = (smog_b << 7) | (smog_b >> 1);
 						period = 1000;
 						OCR2A = 238;
 					}
 					
 					break;
 				case 2:
-					x = (x << 7) | (x >> 1);
-					if((map[my_state] & x) == 0){
+					sw_flag2 = true;
+					if((map[my_state] & x) == 0)
+					{
+						//printf("%d:\n",PORTB);
+						x = (x << 7) | (x >> 1);
 						smog_b = (smog_b << 7) | (smog_b >> 1);
 						period = 1000;
 						OCR2A = 62;
 							
 					}else{
 						x = (x >> 7) | (x << 1);
+						smog_b = (smog_b >> 7) | (smog_b << 1);						
 						period = 1000;
 						OCR2A = 238;
 						
 					}
 					break;
 				case 3:
+					sw_flag2 = true;
 					my_state = (my_state + 1) & 7;			
 					if((map[my_state] & x) == 0){
 						period = 1000;
