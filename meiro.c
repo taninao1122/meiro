@@ -182,12 +182,13 @@ int main()
 		}	
         if (sw_flag) {
 			sw_flag = 0;
-			DDRD = 0xFE;
+		//	DDRD = 0xFE;
 			switch (sw) {	
 				case 0:
 					break;
 				case 1:
 					sw_flag2 = true;
+					DDRD = 0xFE;
 					if((map[my_state] & x) == 0){
 						x = (x >> 7) | (x << 1);
 						smog_b = (smog_b >> 7) | (smog_b << 1);
@@ -203,6 +204,7 @@ int main()
 					
 					break;
 				case 2:
+					DDRD = 0xFE;
 					sw_flag2 = true;
 					if((map[my_state] & x) == 0)
 					{
@@ -221,6 +223,7 @@ int main()
 					}
 					break;
 				case 3:
+					DDRD = 0xFE;
 					sw_flag2 = true;
 					my_state = (my_state + 1) & 7;			
 					if((map[my_state] & x) == 0){
