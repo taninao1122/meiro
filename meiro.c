@@ -12,7 +12,7 @@
 #define user_CTOP 50000UL
 #define CTOP 10000UL
 
-
+void update_led();
 
 volatile unsigned char map[8] =
   {
@@ -23,8 +23,8 @@ volatile unsigned char map[8] =
       0b11111101,
       0b10000001,
       0b10111111,
-      0b10000000,
-      0b11111110
+      0b10000001,
+      0b11111101
     };
 volatile unsigned char stat;
 volatile unsigned char sw;		
@@ -40,7 +40,7 @@ unsigned char x = 0x40;
 unsigned char x_sub = 0;
 unsigned char smog_b = 0xE0;
 bool sw_flag2 = false;
-void update_led();
+bool x_flag = false;
 
 ISR(PCINT1_vect)
 {
@@ -109,7 +109,6 @@ void update_led()
 */
 //霧の発生	
 	if(my_state != 0){
-
 		if(scan == my_state ){
 			PORTB = map[scan] & smog_b;
 			PORTB |= x;
@@ -165,20 +164,20 @@ int main()
 		wdt_reset();
         update_sw();
 		user_cnt ++;
-		
-		
+	
 		if(user_cnt >= user_CTOP){
 			user_cnt = 0;
 			if(user_b == false){
+				user_b = true;
 				x_sub = x;
 				x = x & 0;
-				user_b = true;
+				x_flag = false;	
 			}else{
-				x = x_sub;
+				x_flag = true;
 				user_b = false;
+				x = x_sub;
 			}
-			
-			 
+				 
 		}	
         if (sw_flag) {
 			sw_flag = 0;
@@ -187,55 +186,64 @@ int main()
 				case 0:
 					break;
 				case 1:
-					sw_flag2 = true;
-					DDRD = 0xFE;
-					if((map[my_state] & x) == 0){
+					if(x_flag ==  true ){
+						sw_flag2 = true;
+						DDRD = 0xFE;
 						x = (x >> 7) | (x << 1);
 						smog_b = (smog_b >> 7) | (smog_b << 1);
-						period = 1000;
-						OCR2A = 62;
-					}
-					else{
-						x = (x << 7) | (x >> 1);
-						smog_b = (smog_b << 7) | (smog_b >> 1);
-						period = 1000;
-						OCR2A = 238;
-					}
-					
+						if((map[my_state] & x) == 0){
+						//	x = (x >> 7) | (x << 1);
+						//	smog_b = (smog_b >> 7) | (smog_b << 1);
+							period = 1000;
+							OCR2A = 62;
+						}
+						else{
+							x = (x << 7) | (x >> 1);
+							smog_b = (smog_b << 7) | (smog_b >> 1);
+							period = 1000;
+							OCR2A = 238;
+						}
+					}	
 					break;
+
 				case 2:
-					DDRD = 0xFE;
-					sw_flag2 = true;
-					if((map[my_state] & x) == 0)
-					{
-						//printf("%d:\n",PORTB);
+					if(x_flag ==  true ){
+						DDRD = 0xFE;
+						sw_flag2 = true;
 						x = (x << 7) | (x >> 1);
 						smog_b = (smog_b << 7) | (smog_b >> 1);
-						period = 1000;
-						OCR2A = 62;
+						if((map[my_state] & x) == 0)
+						{
+							//x = (x << 7) | (x >> 1);
+							//smog_b = (smog_b << 7) | (smog_b >> 1);
+							period = 1000;
+							OCR2A = 62;
+								
+						}else{
+							x = (x >> 7) | (x << 1);
+							smog_b = (smog_b >> 7) | (smog_b << 1);						
+							period = 1000;
+							OCR2A = 238;
 							
-					}else{
-						x = (x >> 7) | (x << 1);
-						smog_b = (smog_b >> 7) | (smog_b << 1);						
-						period = 1000;
-						OCR2A = 238;
-						
+						}
 					}
 					break;
 				case 3:
-					DDRD = 0xFE;
-					sw_flag2 = true;
-					my_state = (my_state + 1) & 7;			
-					if((map[my_state] & x) == 0){
-						period = 1000;
-						OCR2A = 62;
-					}
-					else{
-						my_state = (my_state - 1) & 7;
-						period = 1000;
-						OCR2A = 238;	
-					}
-					break;				
+					if(x_flag ==  true ){
+						DDRD = 0xFE;
+						sw_flag2 = true;
+						my_state = (my_state + 1) & 7;			
+						if((map[my_state] & x) == 0){
+							period = 1000;
+							OCR2A = 62;
+						}
+						else{
+							my_state = (my_state - 1) & 7;
+							period = 1000;
+							OCR2A = 238;	
+						}	
+					}	
+					break;		
 			}
 		} 
 	}
