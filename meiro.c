@@ -2,7 +2,11 @@
 所属:3EP1-07
 学籍番号:1614266
 名前:大谷直也
-作成日:2018/11/17
+作成日:2018/11/19
+
+(c) Copright 2018
+Naoya Ohtani@kanazawa institute of technology
+All right reserved 
 */
 
 #include <avr/io.h>
@@ -14,6 +18,7 @@
 #define CTOP 10000UL
 
 void update_led();
+
 /*回路全体図*/
 volatile unsigned char map[8] =
 {
@@ -97,6 +102,16 @@ void update_sw() /*switchフラグ管理*/
 		}
 		return;
 	}
+}
+/*ゲームクリア後の処理*/
+void game_finish(){
+    DDRD = 0xFE;
+    period = 1000;
+    OCR2A = 158;
+    
+    x = 0x40;
+    smog_b = 0xE0; //初期化
+    my_state = 0;//初期化
 }
 
 void update_led() /*マトリクスLEDのアップデート*/
@@ -197,7 +212,8 @@ int main()
 							period = 1000;
 							OCR2A = 62;
 						}
-						else{
+                        /*壁に当たった場合は元に戻る*/
+						else{ 
 							x = (x << 7) | (x >> 1);
 							smog_b = (smog_b << 7) | (smog_b >> 1);
 							period = 1000;
@@ -244,6 +260,11 @@ int main()
 					break;		
 			}
 		} 
-	}
+        /*Game End*/
+        if(my_state == 7){
+            game_finish();
+        }
+    }
+    
 	return 0;
 }
